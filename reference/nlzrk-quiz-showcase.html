@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>nlzrk / quiz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})">
+</script>
+<style>
+/* ═══════════════════════════════════════════════
+   BASE — true neutral. No hue anywhere in the
+   surface or ink stack. RGB values are always
+   equal: #0B0B0B not #0B0B0E.
+═══════════════════════════════════════════════ */
+:root {
+  --bg:         #0B0B0B;
+  --bg-raised:  #101010;
+  --bg-inset:   #080808;
+  --bg-hover:   #161616;
+
+  --ink:        #D6D6D6;
+  --ink-mid:    #6E6E6E;
+  --ink-faint:  #323232;
+  --ink-ghost:  #1A1A1A;
+
+  --rule:       #1E1E1E;
+  --rule-hard:  #2A2A2A;
+
+  /* silver — still true neutral */
+  --silver:     #A4A4A4;
+  --silver-hi:  #CCCCCC;
+  --silver-lo:  #484848;
+  --silver-dim: #363636;
+
+  /* ── PER-TYPE ACCENTS ──
+     Set --accent-* on a parent .q-type-* class.
+     Components reference only --accent, never the
+     raw colour vars below.
+  ── */
+
+  /* MCQ — cyan */
+  --mcq-accent:       #00BFBF;
+  --mcq-accent-dim:   #003838;
+  --mcq-accent-faint: #001818;
+
+  /* Short answer — orange */
+  --sa-accent:        #C87020;
+  --sa-accent-dim:    #3A1E00;
+  --sa-accent-faint:  #1A0D00;
+
+  /* State — desaturated, never neon */
+  --green:      #2A5C38;
+  --green-bg:   #060E08;
+  --red:        #842020;
+  --red-bg:     #0E0606;
+}
+
+/* ── TYPE SCOPING ──
+   Wrap each question in .q-mc or .q-sa.
+   Everything below keys off --accent only.
+── */
+.q-mc {
+  --accent:       var(--mcq-accent);
+  --accent-dim:   var(--mcq-accent-dim);
+  --accent-faint: var(--mcq-accent-faint);
+}
+.q-sa {
+  --accent:       var(--sa-accent);
+  --accent-dim:   var(--sa-accent-dim);
+  --accent-faint: var(--sa-accent-faint);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  scrollbar-color: var(--rule-hard) var(--bg-inset);
+  scrollbar-width: thin;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'IBM Plex Mono', monospace;
+  min-height: 100vh;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.12) 2px,
+    rgba(0,0,0,0.12) 3px
+  );
+}
+
+/* ── CHROME BAR ────────────────────────────────
+   Top bevel via ::before — silver-lo, not hi.
+   Machined feel without being bright.
+─────────────────────────────────────────────── */
+.chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 40px;
+  height: 48px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--bg-raised);
+  border-bottom: 1px solid var(--rule-hard);
+}
+.chrome::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: var(--silver-lo);
+  pointer-events: none;
+}
+.chrome-left {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.chrome-pip {
+  width: 5px;
+  height: 5px;
+  background: var(--silver);
+  display: inline-block;
+  flex-shrink: 0;
+}
+.chrome-right {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── LAYOUT ─────────────────────────────────── */
+main { max-width: 760px; margin: 0 auto; padding: 52px 40px 80px; }
+
+/* ── SECTION LABELS ─────────────────────────── */
+.section-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 32px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* pip inherits --accent if inside a typed block, else silver */
+.section-label::before {
+  content: '';
+  width: 4px;
+  height: 4px;
+  background: var(--silver);
+  flex-shrink: 0;
+}
+
+/* ── UPLOAD ZONE ─────────────────────────────── */
+.upload-zone {
+  border: 1px solid var(--rule-hard);
+  background: var(--bg-inset);
+  padding: 32px 28px;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 60px;
+  position: relative;
+}
+.upload-zone::before,
+.upload-zone::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-color: var(--silver-dim);
+  border-style: solid;
+  pointer-events: none;
+}
+.upload-zone::before { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
+.upload-zone::after  { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
+.upload-zone:hover     { border-color: var(--silver-dim); background: var(--bg-hover); }
+.upload-zone.drag-over { border-color: var(--silver-lo); background: #0F0F0F; }
+
+.upload-caret {
+  font-size: 12px;
+  color: var(--silver);
+  margin-right: 14px;
+  line-height: 1.5;
+  user-select: none;
+  flex-shrink: 0;
+}
+.upload-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  display: block;
+  margin-bottom: 10px;
+}
+.upload-hint {
+  font-size: 10px;
+  color: var(--ink-faint);
+  letter-spacing: 0.03em;
+  line-height: 1.9;
+}
+.upload-hint code {
+  background: var(--bg-raised);
+  border: 1px solid var(--rule-hard);
+  padding: 1px 6px;
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--silver);
+}
+
+/* ── PROGRESS ────────────────────────────────── */
+.progress-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 52px;
+}
+.progress-counter {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.progress-track { flex: 1; height: 1px; background: var(--rule); }
+.progress-fill {
+  height: 1px;
+  background: var(--accent, var(--silver));
+  width: 28%;
+  transition: width 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── QUESTION BLOCK ──────────────────────────── */
+.question-block { position: relative; margin-bottom: 32px; }
+
+.ghost-number {
+  position: absolute;
+  top: -24px;
+  left: -4px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 120px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--ink-ghost);
+  user-select: none;
+  pointer-events: none;
+  z-index: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.question-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 1;
+}
+/* accent square pip — driven by question type */
+.q-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--accent, var(--silver-lo));
+  flex-shrink: 0;
+}
+.q-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+/* type tag — coloured with accent */
+.q-type-tag {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--accent, var(--silver));
+  border: 1px solid var(--accent-dim, var(--silver-dim));
+  padding: 2px 7px;
+  margin-left: auto;
+}
+
+.question-text {
+  font-family: 'Instrument Serif', serif;
+  font-size: 23px;
+  line-height: 1.48;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  position: relative;
+  z-index: 1;
+  margin-bottom: 28px;
+}
+
+/* ── OPTIONS (MCQ) ───────────────────────────── */
+.options { border-top: 1px solid var(--rule); }
+
+.option {
+  all: unset;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  width: 100%;
+  padding: 14px 6px 14px 12px;
+  border-bottom: 1px solid var(--rule);
+  position: relative;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.10s;
+}
+.option::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: transparent;
+  transition: background 0.12s;
+}
+
+.option:hover::before  { background: var(--accent, var(--silver)); }
+.option:hover          { background: rgba(164,164,164,0.04); }
+.option:hover .opt-key { border-color: var(--accent, var(--silver-lo)); color: var(--accent, var(--silver)); }
+
+.option[data-state="correct"]::before  { background: var(--green); }
+.option[data-state="correct"]          { background: var(--green-bg); }
+.option[data-state="correct"] .opt-key { background: var(--green); border-color: var(--green); color: var(--ink); }
+
+.option[data-state="wrong"]::before    { background: var(--red); }
+.option[data-state="wrong"]            { background: var(--red-bg); }
+.option[data-state="wrong"] .opt-key   { background: var(--red); border-color: var(--red); color: var(--ink); }
+
+.option[data-state="dim"] { opacity: 0.22; cursor: default; pointer-events: none; }
+
+.opt-key {
+  font-size: 9px;
+  font-weight: 600;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  border: 1px solid var(--ink-faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-faint);
+  transition: all 0.10s;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.opt-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-mid);
+  letter-spacing: 0.01em;
+}
+
+/* ── SHORT ANSWER INPUT ──────────────────────── */
+.sa-input-wrap {
+  border-top: 1px solid var(--rule);
+  padding: 20px 0 0;
+}
+.sa-input {
+  all: unset;
+  display: block;
+  width: 100%;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--bg-inset);
+  border: 1px solid var(--rule-hard);
+  border-left: 2px solid var(--accent, var(--silver-lo));
+  padding: 14px 16px;
+  box-sizing: border-box;
+  resize: none;
+  transition: border-color 0.12s;
+  caret-color: var(--accent, var(--silver));
+}
+.sa-input::placeholder { color: var(--ink-faint); }
+.sa-input:focus { outline: none; border-color: var(--accent-dim, var(--rule-hard)); }
+
+/* ── FEEDBACK ─────────────────────────────────── */
+.feedback {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rule-hard);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  animation: fadeUp 0.18s ease;
+}
+.feedback.ok  { border-top-color: var(--accent, var(--silver-lo)); }
+.feedback.bad { border-top-color: var(--red); }
+
+.feedback-msg {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.feedback-msg.ok  { color: var(--accent, var(--silver)); }
+.feedback-msg.bad { color: var(--red); }
+
+.feedback-answer {
+  font-size: 11px;
+  color: var(--ink-mid);
+  letter-spacing: 0.02em;
+  max-width: 400px;
+  line-height: 1.65;
+}
+
+/* ── LATEX BLOCK ──────────────────────────────── */
+.latex-block {
+  margin: 32px 0;
+  padding: 18px 22px;
+  background: var(--bg-inset);
+  border-left: 2px solid var(--accent-dim, var(--silver-dim));
+  overflow-x: auto;
+}
+.katex-display { margin: 0 !important; }
+.katex { font-size: 1.02em; color: var(--ink); }
+
+/* ── BUTTONS ──────────────────────────────────── */
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+
+.btn {
+  all: unset;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bg);
+  background: var(--accent, var(--silver));
+  padding: 10px 22px;
+  display: inline-block;
+  transition: opacity 0.10s;
+}
+.btn:hover { opacity: 0.72; }
+
+.btn-ghost {
+  all: unset;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-mid);
+  border: 1px solid var(--rule-hard);
+  padding: 9px 22px;
+  display: inline-block;
+  transition: border-color 0.10s, color 0.10s;
+}
+.btn-ghost:hover { border-color: var(--silver-dim); color: var(--ink); }
+
+/* ── RESULTS ──────────────────────────────────── */
+.results-header {
+  display: flex;
+  align-items: flex-end;
+  gap: 24px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--rule-hard);
+  margin-bottom: 40px;
+  margin-top: 60px;
+}
+.results-score {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 96px;
+  line-height: 0.88;
+  color: var(--ink);
+  letter-spacing: -0.05em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.results-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-bottom: 10px;
+}
+.grade-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid var(--silver-lo);
+  color: var(--silver);
+  padding: 4px 10px;
+}
+
+/* ── DIVIDER ──────────────────────────────────── */
+.divider { height: 1px; background: var(--rule); margin: 60px 0; }
+
+/* ── ANIMATIONS ───────────────────────────────── */
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.question-section { animation: slideIn 0.20s ease; }
+
+/* ── MOBILE ───────────────────────────────────── */
+@media (max-width: 600px) {
+  .chrome        { padding: 0 18px; }
+  main           { padding: 32px 18px 64px; }
+  .question-text { font-size: 19px; }
+  .ghost-number  { font-size: 90px; top: -18px; }
+  .results-score { font-size: 68px; }
+  .upload-zone   { padding: 24px 18px; }
+}
+</style>
+</head>
+<body>
+
+<header class="chrome">
+  <span class="chrome-left"><span class="chrome-pip"></span>calculus-ii.md</span>
+  <span class="chrome-right">02 / 07</span>
+</header>
+
+<main>
+
+  <!-- ── IMPORT ── -->
+  <p class="section-label">01 — import deck</p>
+  <div class="upload-zone" id="uploadZone">
+    <span class="upload-caret">&gt;_</span>
+    <div>
+      <span class="upload-label">drop .md file or click to browse</span>
+      <p class="upload-hint">
+        syntax: <code>Q:</code> <code>A:</code> <code>img:</code> <code>type: mc | sa</code><br>
+        latex: <code>$...$</code> inline &nbsp;·&nbsp; <code>$$...$$</code> display
+      </p>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── MCQ INTERACTIVE ── -->
+  <p class="section-label">02 — multiple choice (cyan)</p>
+
+  <!-- q-mc scopes cyan accent to all children -->
+  <div class="q-mc">
+    <div class="progress-row">
+      <span class="progress-counter">02 / 07</span>
+      <div class="progress-track"><div class="progress-fill"></div></div>
+    </div>
+
+    <div class="question-section">
+      <div class="question-block">
+        <span class="ghost-number">02</span>
+        <div class="question-meta">
+          <span class="q-dot"></span>
+          <span class="q-label">integration</span>
+          <span class="q-type-tag">MC</span>
+        </div>
+        <p class="question-text">
+          Which technique is most appropriate for evaluating
+          $\displaystyle\int x^2 e^x \, dx$?
+        </p>
+      </div>
+
+      <div class="options" id="optionsList">
+        <button class="option" data-correct="false" onclick="choose(this)">
+          <span class="opt-key">A</span>
+          <span class="opt-text">Substitution — let $u = x^2$</span>
+        </button>
+        <button class="option" data-correct="true" onclick="choose(this)">
+          <span class="opt-key">B</span>
+          <span class="opt-text">Integration by parts — apply $\int u \, dv = uv - \int v \, du$ twice</span>
+        </button>
+        <button class="option" data-correct="false" onclick="choose(this)">
+          <span class="opt-key">C</span>
+          <span class="opt-text">Partial fractions — decompose the integrand</span>
+        </button>
+        <button class="option" data-correct="false" onclick="choose(this)">
+          <span class="opt-key">D</span>
+          <span class="opt-text">Trigonometric substitution — let $x = \tan\theta$</span>
+        </button>
+      </div>
+
+      <div class="feedback" id="feedback" style="display:none">
+        <div>
+          <p class="feedback-msg ok" id="feedbackMsg">correct</p>
+          <p class="feedback-answer" id="feedbackAnswer">
+            Let $u = x^2$, $dv = e^x dx$. Then $\int x^2 e^x dx = x^2 e^x - 2xe^x + 2e^x + C$.
+          </p>
+        </div>
+        <div class="btn-row">
+          <button class="btn">Next →</button>
+          <button class="btn-ghost">Skip</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── MCQ REVEALED ── -->
+  <p class="section-label">03 — mc correct state</p>
+
+  <div class="q-mc">
+    <div class="question-block">
+      <span class="ghost-number">03</span>
+      <div class="question-meta">
+        <span class="q-dot"></span>
+        <span class="q-label">linear algebra</span>
+        <span class="q-type-tag">MC</span>
+      </div>
+      <p class="question-text">
+        Let $A \in \mathbb{R}^{n \times n}$. Which statement about eigenvalues is always true?
+      </p>
+    </div>
+
+    <div class="latex-block">
+      $$\det(A - \lambda I) = 0 \implies \lambda \text{ is an eigenvalue of } A$$
+    </div>
+
+    <div class="options">
+      <button class="option" data-state="dim"><span class="opt-key">A</span><span class="opt-text">All eigenvalues are real</span></button>
+      <button class="option" data-state="correct"><span class="opt-key">✓</span><span class="opt-text">The characteristic polynomial has degree $n$</span></button>
+      <button class="option" data-state="dim"><span class="opt-key">C</span><span class="opt-text">$A$ is always diagonalisable</span></button>
+      <button class="option" data-state="dim"><span class="opt-key">D</span><span class="opt-text">$\text{tr}(A) = 0 \implies \det(A) = 0$</span></button>
+    </div>
+
+    <div class="feedback ok" style="display:flex">
+      <div>
+        <p class="feedback-msg ok">correct</p>
+        <p class="feedback-answer">
+          The characteristic polynomial $\det(A - \lambda I)$ has degree $n$, giving $n$ eigenvalues (with multiplicity) over $\mathbb{C}$.
+        </p>
+      </div>
+      <div class="btn-row">
+        <button class="btn">Next →</button>
+        <button class="btn-ghost">Skip</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SHORT ANSWER ── -->
+  <p class="section-label">04 — short answer (orange)</p>
+
+  <!-- q-sa scopes orange accent to all children -->
+  <div class="q-sa">
+    <div class="question-block">
+      <span class="ghost-number">04</span>
+      <div class="question-meta">
+        <span class="q-dot"></span>
+        <span class="q-label">real analysis</span>
+        <span class="q-type-tag">SA</span>
+      </div>
+      <p class="question-text">
+        State the $\varepsilon$-$\delta$ definition of continuity of $f$ at a point $a$.
+      </p>
+    </div>
+
+    <div class="sa-input-wrap">
+      <textarea class="sa-input" rows="4" placeholder="write your answer here..."></textarea>
+    </div>
+
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn">Submit</button>
+      <button class="btn-ghost">Skip</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── SHORT ANSWER REVEALED ── -->
+  <p class="section-label">05 — sa revealed state</p>
+
+  <div class="q-sa">
+    <div class="question-block">
+      <span class="ghost-number">05</span>
+      <div class="question-meta">
+        <span class="q-dot"></span>
+        <span class="q-label">mechanics</span>
+        <span class="q-type-tag">SA</span>
+      </div>
+      <p class="question-text">
+        A block of mass $m$ on a frictionless incline at angle $\theta$.
+        Derive the acceleration along the slope.
+      </p>
+    </div>
+
+    <div class="sa-input-wrap" style="margin-bottom:0">
+      <textarea class="sa-input" rows="3" readonly>The net force along the slope is mg sin θ, so by Newton's second law a = g sin θ.</textarea>
+    </div>
+
+    <div class="feedback bad" style="display:flex; margin-top:20px">
+      <div>
+        <p class="feedback-msg bad">incorrect</p>
+        <p class="feedback-answer">
+          The component of gravity along the slope is $mg\sin\theta$, giving $a = g\sin\theta$.
+          You may have used $\cos\theta$ — that is the component normal to the slope.
+        </p>
+      </div>
+      <div class="btn-row">
+        <button class="btn">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── RESULTS ── -->
+  <p class="section-label">06 — results</p>
+
+  <div class="results-header">
+    <div class="results-score">5/7</div>
+    <div>
+      <p class="results-label">calculus-ii.md</p>
+      <span class="grade-badge">distinction</span>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" style="background:var(--silver);color:var(--bg)">Restart deck</button>
+    <button class="btn-ghost">Import new file</button>
+  </div>
+
+</main>
+
+<script>
+function choose(el) {
+  const all = document.querySelectorAll('#optionsList .option');
+  const isCorrect = el.dataset.correct === 'true';
+  all.forEach(opt => {
+    if (opt === el) {
+      opt.dataset.state = isCorrect ? 'correct' : 'wrong';
+      opt.querySelector('.opt-key').textContent = isCorrect ? '✓' : '✗';
+    } else {
+      opt.dataset.state = 'dim';
+    }
+    opt.onclick = null;
+  });
+  const fb = document.getElementById('feedback');
+  const msg = document.getElementById('feedbackMsg');
+  fb.style.display = 'flex';
+  fb.className = 'feedback ' + (isCorrect ? 'ok' : 'bad');
+  msg.className = 'feedback-msg ' + (isCorrect ? 'ok' : 'bad');
+  msg.textContent = isCorrect ? 'correct' : 'incorrect';
+  if (window.renderMathInElement) {
+    renderMathInElement(fb, {delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]});
+  }
+}
+
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); });
+</script>
+
+</body>
+</html>
