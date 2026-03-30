@@ -100,16 +100,7 @@ Paths are relative to the quiz file location, or you can use an absolute URL.
 
 ---
 
-## Hosting on GitHub Pages
 
-1. Push this repository to GitHub.
-2. Go to **Settings → Pages**.
-3. Set the source to `main` branch, root folder.
-4. Your app will be live at `https://yourusername.github.io/nkquiz`.
-
-No build step needed — the app is fully static.
-
----
 
 ## Generating questions with an AI chatbot
 
