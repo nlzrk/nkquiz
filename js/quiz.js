@@ -350,7 +350,7 @@ restartBtn.addEventListener('click', () => startBtn.click());
 newQuizBtn.addEventListener('click', () => {
   mdInput.value             = '';
   fileInput.value           = '';
-  chromeTitle.textContent   = 'zrkquiz';
+  chromeTitle.textContent   = 'nkquiz';
   chromeCounter.textContent = '';
   showScreen('upload');
 });
