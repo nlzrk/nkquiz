@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZRKQuiz</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="chrome">
+  <span class="chrome-left"><span class="chrome-pip"></span><span id="chrome-title">zrkquiz</span></span>
+  <span class="chrome-right" id="chrome-counter"></span>
+</header>
+
+<main>
+
+  <!-- Upload -->
+  <div id="upload-screen">
+    <p class="section-label">import deck</p>
+
+    <div class="upload-zone" id="upload-zone">
+      <span class="upload-caret">&gt;_</span>
+      <div>
+        <span class="upload-label">drop .md file or click to browse</span>
+        <p class="upload-hint">
+          syntax: <code>type:MC</code> <code>type:SA</code> <code>Q:</code> <code>A:</code> <code>M:</code><br>
+          latex: <code>$...$</code> inline &nbsp;·&nbsp; <code>$$...$$</code> display
+        </p>
+      </div>
+      <input type="file" id="file-input" accept=".md,.txt">
+    </div>
+
+    <textarea id="md-input" class="paste-input" placeholder="...or paste your quiz file contents here"></textarea>
+
+    <p id="parse-error" class="error-msg" hidden></p>
+
+    <div class="btn-row">
+      <button class="btn" id="start-btn">Start Quiz</button>
+      <label class="shuffle-label" id="shuffle-label">
+        <input type="checkbox" id="shuffle-toggle">
+        <span>Shuffle</span>
+      </label>
+    </div>
+
+    <details class="syntax-guide">
+      <summary>question file format</summary>
+      <div class="syntax-body">
+        <p>Multiple choice — asterisk marks the correct answer:</p>
+        <pre>{type:MC, Q:What is 2+2?, A:a;3 *b;4 c;5 d;6}</pre>
+        <p>Short answer — sample answer always shown, M sets marks available (default 5):</p>
+        <pre>{type:SA, Q:Capital of France?, A:Paris, M:1}</pre>
+        <p>Question bank — pick N random questions from the file:</p>
+        <pre>{bank:10}
+
+{type:MC, Q:...}
+{type:SA, Q:...}
+... as many questions as you like</pre>
+        <p>LaTeX in questions:</p>
+        <pre>{type:MC, Q:Solve $x^2=9$, A:a;x=2 *b;x=±3 c;x=4 d;x=9}</pre>
+        <p>Images in questions:</p>
+        <pre>{type:SA, Q:Name this. {img:./img.png}, A:Carbon, M:1}</pre>
+      </div>
+    </details>
+  </div>
+
+
+  <!-- Quiz -->
+  <div id="quiz-screen" hidden>
+    <div id="question-section" class="question-section">
+
+      <div class="progress-row">
+        <span class="progress-counter" id="question-counter"></span>
+        <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+        <span class="progress-counter" id="score-tracker"></span>
+      </div>
+
+      <div class="question-block">
+        <span class="ghost-number" id="ghost-number"></span>
+        <div class="question-meta">
+          <span class="q-dot"></span>
+          <span class="q-label">question</span>
+          <span class="q-type-tag" id="q-type-tag"></span>
+        </div>
+        <div class="question-text" id="question-text"></div>
+      </div>
+
+      <!-- MC options -->
+      <div class="options" id="mc-options" hidden></div>
+
+      <!-- SA input -->
+      <div class="sa-input-wrap" id="sa-input-area" hidden>
+        <textarea class="sa-input" id="sa-input" rows="4" placeholder="write your answer here..."></textarea>
+      </div>
+
+      <!-- Feedback strip (MC: correct/wrong | SA: sample answer reveal) -->
+      <div class="feedback" id="feedback-area" hidden>
+        <div>
+          <p class="feedback-msg" id="feedback-msg"></p>
+          <p class="feedback-answer" id="feedback-text"></p>
+        </div>
+      </div>
+
+      <!-- SA self-mark (shown below feedback after SA submit) -->
+      <div id="sa-mark-area" hidden>
+        <p class="mark-prompt">how many marks do you give yourself?</p>
+        <div class="btn-row" id="sa-mark-buttons"></div>
+      </div>
+
+      <!-- Next / Reveal -->
+      <div class="btn-row" id="quiz-controls">
+        <button class="btn" id="next-btn" hidden>Next →</button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- Results -->
+  <div id="results-screen" hidden>
+    <div class="results-header">
+      <div class="results-score" id="results-score"></div>
+      <div>
+        <p class="results-label">marks</p>
+        <span class="grade-badge" id="grade-badge"></span>
+      </div>
+    </div>
+
+    <div id="results-review"></div>
+
+    <div class="btn-row" style="margin-top: 48px;">
+      <button class="btn" id="restart-btn">Restart deck</button>
+      <button class="btn-ghost" id="new-quiz-btn">Import new file</button>
+    </div>
+  </div>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="js/parser.js"></script>
+<script src="js/quiz.js"></script>
+
+</body>
+</html>
