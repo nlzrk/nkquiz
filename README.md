@@ -2,7 +2,9 @@
 
 A lightweight, browser-based quiz app. Load a question file, take the quiz, and self-mark your answers — no accounts, no servers, no install.
 
-**[Live app →](https://nlzrk.github.io/nkquiz)**
+<img width="1449" height="796" alt="image" src="https://github.com/user-attachments/assets/fcf56015-2c7b-48d6-b574-8c5c3f5d40f8" />
+
+[quiz.nlzrk.net](quiz.nlzrk.net)
 
 ---
 
