@@ -13,6 +13,124 @@ let answered   = false;   // true after MC option clicked OR SA answer revealed
 let selfMarked = false;   // true after SA mark selected
 let answers    = [];
 
+
+// --- History (localStorage) ---
+
+const HISTORY_KEY = 'nkquiz_history';
+const HISTORY_MAX = 10;
+
+let activeHistoryId = null;
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
+  catch (_) { return []; }
+}
+
+function saveHistory(entries) {
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(entries));
+}
+
+function contentHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(31, h) + str.charCodeAt(i) | 0;
+  }
+  return h.toString(36);
+}
+
+function saveQuizToHistory(content, name) {
+  const id = contentHash(content);
+  activeHistoryId = id;
+  const history = loadHistory();
+  const idx = history.findIndex(e => e.id === id);
+
+  if (idx !== -1) {
+    const existing = history.splice(idx, 1)[0];
+    existing.lastPlayed = new Date().toISOString();
+    existing.playCount++;
+    history.unshift(existing);
+  } else {
+    history.unshift({
+      id, name, content,
+      savedAt:    new Date().toISOString(),
+      lastPlayed: new Date().toISOString(),
+      playCount:  1,
+      lastScore:  null,
+    });
+    if (history.length > HISTORY_MAX) history.length = HISTORY_MAX;
+  }
+
+  saveHistory(history);
+}
+
+function updateHistoryScore(earned, total, pct, gradeText) {
+  if (!activeHistoryId) return;
+  const history = loadHistory();
+  const entry = history.find(e => e.id === activeHistoryId);
+  if (entry) {
+    entry.lastScore = { earned, total, pct, grade: gradeText };
+    saveHistory(history);
+  }
+  renderHistorySection();
+}
+
+function removeFromHistory(id) {
+  saveHistory(loadHistory().filter(e => e.id !== id));
+  renderHistorySection();
+}
+
+function loadQuizFromHistory(entry) {
+  mdInput.value           = entry.content;
+  chromeTitle.textContent = entry.name;
+  uploadZone.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function historyDate(iso) {
+  const d    = new Date(iso);
+  const diff = Date.now() - d;
+  if (diff < 60000)    return 'just now';
+  if (diff < 3600000)  return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function renderHistorySection() {
+  const section = document.getElementById('history-section');
+  const list    = document.getElementById('history-list');
+  const history = loadHistory();
+
+  if (history.length === 0) { section.hidden = true; return; }
+  section.hidden = false;
+  list.innerHTML = '';
+
+  history.forEach(entry => {
+    const row = document.createElement('div');
+    row.className = 'history-row';
+
+    const scorePart = entry.lastScore
+      ? `${entry.lastScore.earned}/${entry.lastScore.total} &nbsp;·&nbsp; ${escapeHTML(entry.lastScore.grade)}`
+      : '<span class="history-unseen">not yet completed</span>';
+    const plays = entry.playCount === 1 ? '1 play' : `${entry.playCount} plays`;
+
+    row.innerHTML = `
+      <div class="history-main">
+        <span class="history-name">${escapeHTML(entry.name)}</span>
+        <span class="history-meta">${scorePart} &nbsp;·&nbsp; ${historyDate(entry.lastPlayed)} &nbsp;·&nbsp; ${escapeHTML(plays)}</span>
+      </div>
+      <button class="history-remove" title="Remove from history">×</button>
+    `;
+
+    row.querySelector('.history-main').addEventListener('click', () => loadQuizFromHistory(entry));
+    row.querySelector('.history-remove').addEventListener('click', (e) => {
+      e.stopPropagation();
+      removeFromHistory(entry.id);
+    });
+
+    list.appendChild(row);
+  });
+}
+
 // Upload
 const uploadScreen  = document.getElementById('upload-screen');
 const fileInput     = document.getElementById('file-input');
@@ -97,6 +215,12 @@ startBtn.addEventListener('click', () => {
     selfMarked = false;
     answers    = [];
     parseError.hidden = true;
+
+    const quizName = (chromeTitle.textContent && chromeTitle.textContent !== 'nkquiz')
+      ? chromeTitle.textContent
+      : 'Pasted quiz';
+    saveQuizToHistory(content, quizName);
+
     showScreen('quiz');
     renderQuestion();
   } catch (err) {
@@ -306,7 +430,9 @@ function showResults() {
   const pct         = maxPossible > 0 ? Math.round((earned / maxPossible) * 100) : 0;
 
   resultsScore.textContent = `${earned}/${maxPossible}`;
-  gradeBadge.textContent   = grade(pct);
+  const gradeText          = grade(pct);
+  gradeBadge.textContent   = gradeText;
+  updateHistoryScore(earned, maxPossible, pct, gradeText);
 
   resultsReview.innerHTML = '';
   answers.forEach((a, i) => {
@@ -401,3 +527,6 @@ function escapeAttr(str) {
 function escapeHTML(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
+
+// Initialise history on page load
+renderHistorySection();
